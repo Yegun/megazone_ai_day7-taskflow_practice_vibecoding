@@ -1,4 +1,26 @@
+# Python
 .venv/
 __pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Node
 node_modules/
 dist/
+*.log
+
+# 환경 변수 · 비밀 값
+.env
+.env.*
+!.env.example
+
+# SQLite 데이터 파일 (D-007: 이 컴퓨터의 파일 하나)
+*.db
+*.sqlite
+*.sqlite3
+
+# OS · 도구
+Thumbs.db
+.DS_Store
+.claude/settings.local.json

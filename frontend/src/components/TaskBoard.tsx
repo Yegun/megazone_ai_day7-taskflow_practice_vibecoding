@@ -1,29 +1,68 @@
-import { useEffect, useState } from 'react'
-import { createTask, deleteTask, listTasks, updateTask } from '../api/tasks'
+import { useCallback, useEffect, useState } from 'react'
+import {
+  createTask,
+  deleteTask,
+  describeError,
+  isNotFound,
+  listTasks,
+  updateTask,
+} from '../api/tasks'
 import { STATUSES, type Status, type Task } from '../types'
+import StatusMessage from './StatusMessage'
 import TaskColumn from './TaskColumn'
 import TaskForm from './TaskForm'
 
+type LoadState = 'loading' | 'ready' | 'failed'
+
 function TaskBoard() {
-  // null = 아직 불러오지 못함. 빈 목록([])과 구분한다.
-  const [tasks, setTasks] = useState<Task[] | null>(null)
+  // 불러오기 실패(failed)는 빈 목록(ready + [])과 구분해서 보여 준다.
+  const [loadState, setLoadState] = useState<LoadState>('loading')
+  const [tasks, setTasks] = useState<Task[]>([])
+  const [loadError, setLoadError] = useState('')
+  // 등록 · 수정 · 삭제가 실패했을 때의 알림. 목록은 바뀌지 않는다. (D-003)
   const [error, setError] = useState('')
 
-  useEffect(() => {
+  const fetchTasks = useCallback(() => {
+    listTasks()
+      .then((list) => {
+        setTasks(list)
+        setLoadState('ready')
+      })
+      .catch((e: unknown) => {
+        setLoadError(describeError(e))
+        setLoadState('failed')
+      })
+  }, [])
+
+  // 처음 열 때. 상태는 이미 'loading' 이다.
+  useEffect(fetchTasks, [fetchTasks])
+
+  function retry() {
+    setLoadState('loading')
+    fetchTasks()
+  }
+
+  // 없는 카드를 고치거나 지우려 했을 때 목록을 저장소와 맞춘다. 실패하면 지금 목록을 그대로 둔다.
+  function refresh() {
     listTasks()
       .then(setTasks)
-      .catch((e: Error) => setError(`카드를 불러오지 못했습니다. (${e.message})`))
-  }, [])
+      .catch(() => {})
+  }
+
+  function fail(message: string, e: unknown) {
+    setError(`${message} ${describeError(e)}`)
+    if (isNotFound(e)) refresh()
+  }
 
   async function handleCreate(input: { title: string; description: string }) {
     try {
       const created = await createTask(input)
       // 성공 응답을 받은 뒤에만 목록을 바꾼다. (D-003)
-      setTasks((prev) => [...(prev ?? []), created])
+      setTasks((prev) => [...prev, created])
       setError('')
       return true
     } catch (e) {
-      setError(`등록하지 못했습니다. (${(e as Error).message})`)
+      fail('등록하지 못했습니다.', e)
       return false
     }
   }
@@ -36,13 +75,11 @@ function TaskBoard() {
   ) {
     try {
       const updated = await updateTask(task.id, input)
-      setTasks((prev) =>
-        (prev ?? []).map((t) => (t.id === updated.id ? updated : t)),
-      )
+      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))
       setError('')
       return true
     } catch (e) {
-      setError(`${failMessage} (${(e as Error).message})`)
+      fail(failMessage, e)
       return false
     }
   }
@@ -64,30 +101,48 @@ function TaskBoard() {
     if (!window.confirm(`"${task.title}" 카드를 삭제할까요?`)) return
     try {
       await deleteTask(task.id)
-      setTasks((prev) => (prev ?? []).filter((t) => t.id !== task.id))
+      setTasks((prev) => prev.filter((t) => t.id !== task.id))
       setError('')
     } catch (e) {
-      setError(`삭제하지 못했습니다. (${(e as Error).message})`)
+      fail('삭제하지 못했습니다.', e)
     }
   }
 
   return (
     <>
-      <TaskForm onSubmit={handleCreate} />
-      {error && <p className="error" role="alert">{error}</p>}
-      {tasks && (
-        <div className="board">
-          {STATUSES.map((s) => (
-            <TaskColumn
-              key={s}
-              status={s}
-              tasks={tasks.filter((t) => t.status === s)}
-              onChangeStatus={handleChangeStatus}
-              onSave={handleSave}
-              onDelete={handleDelete}
-            />
-          ))}
-        </div>
+      <TaskForm onSubmit={handleCreate} disabled={loadState !== 'ready'} />
+
+      {loadState === 'loading' && (
+        <StatusMessage kind="loading">불러오는 중...</StatusMessage>
+      )}
+
+      {loadState === 'failed' && (
+        <StatusMessage kind="error" onRetry={retry}>
+          카드를 불러오지 못했습니다. {loadError}
+        </StatusMessage>
+      )}
+
+      {loadState === 'ready' && (
+        <>
+          {error && <StatusMessage kind="error">{error}</StatusMessage>}
+          {tasks.length === 0 && (
+            <StatusMessage kind="empty">
+              아직 Task가 없습니다. 위에서 첫 Task를 만들어 보세요.
+            </StatusMessage>
+          )}
+          <div className="board">
+            {STATUSES.map((s) => (
+              <TaskColumn
+                key={s}
+                status={s}
+                tasks={tasks.filter((t) => t.status === s)}
+                onChangeStatus={handleChangeStatus}
+                onSave={handleSave}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+        </>
       )}
     </>
   )

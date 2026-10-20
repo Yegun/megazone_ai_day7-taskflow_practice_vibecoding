@@ -153,6 +153,39 @@ main > h1 {
   font-size: 14px;
 }
 
+.status-message {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-bottom: 16px;
+  padding: 10px 12px;
+  font-size: 15px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.status-message.error {
+  color: #d33;
+  border-color: #d33;
+}
+
+.status-message button {
+  padding: 4px 12px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text-h);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.task-form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .board {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

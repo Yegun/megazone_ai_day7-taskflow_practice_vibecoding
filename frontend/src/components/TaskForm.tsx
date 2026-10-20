@@ -3,9 +3,11 @@ import { useState, type FormEvent } from 'react'
 interface Props {
   // 저장이 성공하면 true. 실패하면 false 를 돌려주고 입력값은 남긴다.
   onSubmit: (input: { title: string; description: string }) => Promise<boolean>
+  // 목록을 불러오기 전에는 등록하지 못하게 막는다.
+  disabled?: boolean
 }
 
-function TaskForm({ onSubmit }: Props) {
+function TaskForm({ onSubmit, disabled = false }: Props) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [hint, setHint] = useState('')
@@ -42,7 +44,7 @@ function TaskForm({ onSubmit }: Props) {
         value={description}
         onChange={(e) => setDescription(e.target.value)}
       />
-      <button type="submit" disabled={saving}>
+      <button type="submit" disabled={saving || disabled}>
         등록
       </button>
       {hint && (

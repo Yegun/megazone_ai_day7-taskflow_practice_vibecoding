@@ -28,6 +28,10 @@ class TaskCreate(BaseModel):
         return _strip_title(value)
 
 
+class TaskUpdate(BaseModel):
+    status: Status
+
+
 class Task(BaseModel):
     id: int
     title: str

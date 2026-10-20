@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { createTask, listTasks } from '../api/tasks'
-import { STATUSES, type Task } from '../types'
+import { createTask, listTasks, updateTask } from '../api/tasks'
+import { STATUSES, type Status, type Task } from '../types'
 import TaskColumn from './TaskColumn'
 import TaskForm from './TaskForm'
 
@@ -28,6 +28,20 @@ function TaskBoard() {
     }
   }
 
+  async function handleChangeStatus(task: Task, status: Status) {
+    if (status === task.status) return
+    try {
+      const updated = await updateTask(task.id, { status })
+      // 성공 응답을 받은 뒤에만 바꾼다. 실패하면 이전 상태 그대로. (D-003)
+      setTasks((prev) =>
+        (prev ?? []).map((t) => (t.id === updated.id ? updated : t)),
+      )
+      setError('')
+    } catch (e) {
+      setError(`상태를 바꾸지 못했습니다. (${(e as Error).message})`)
+    }
+  }
+
   return (
     <>
       <TaskForm onSubmit={handleCreate} />
@@ -39,6 +53,7 @@ function TaskBoard() {
               key={s}
               status={s}
               tasks={tasks.filter((t) => t.status === s)}
+              onChangeStatus={handleChangeStatus}
             />
           ))}
         </div>

@@ -67,15 +67,27 @@ def list_tasks() -> list[Task]:
 
 def update_task(task_id: int, data: TaskUpdate) -> Task | None:
     """요청에 담긴 값만 바꾼다. 카드가 없으면 None."""
+    values = data.model_dump(exclude_unset=True)
+    if "status" in values:
+        values["status"] = values["status"].value
+    # 열 이름은 TaskUpdate 의 필드에서만 오므로 SQL 에 그대로 쓴다.
+    assignments = ", ".join(f"{col} = ?" for col in [*values, "updated_at"])
     with session() as conn:
         cur = conn.execute(
-            "UPDATE tasks SET status = ?, updated_at = ? WHERE id = ?",
-            (data.status.value, _now(), task_id),
+            f"UPDATE tasks SET {assignments} WHERE id = ?",
+            (*values.values(), _now(), task_id),
         )
         if cur.rowcount == 0:
             return None
         row = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
     return _to_task(row)
+
+
+def delete_task(task_id: int) -> bool:
+    """저장소에서 실제로 지운다 (D-009). 지울 카드가 없으면 False."""
+    with session() as conn:
+        cur = conn.execute("DELETE FROM tasks WHERE id = ?", (task_id,))
+    return cur.rowcount > 0
 
 
 def create_task(data: TaskCreate) -> Task:

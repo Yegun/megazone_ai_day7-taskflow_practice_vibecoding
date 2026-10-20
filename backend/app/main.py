@@ -1,8 +1,27 @@
-from fastapi import FastAPI
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
-app = FastAPI(title="task-flow")
+from fastapi import APIRouter, FastAPI
+
+from . import db
+from .routes import tasks
 
 
-@app.get("/health")
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    db.init_db()
+    yield
+
+
+app = FastAPI(title="task-flow", lifespan=lifespan)
+
+api = APIRouter(prefix="/api")
+
+
+@api.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+api.include_router(tasks.router)
+app.include_router(api)

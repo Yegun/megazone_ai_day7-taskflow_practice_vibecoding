@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
-from .schemas import Status, Task, TaskCreate
+from .schemas import Status, Task, TaskCreate, TaskUpdate
 
 DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent / "data" / "taskflow.db"
 
@@ -63,6 +63,19 @@ def list_tasks() -> list[Task]:
     with session() as conn:
         rows = conn.execute("SELECT * FROM tasks ORDER BY id").fetchall()
     return [_to_task(r) for r in rows]
+
+
+def update_task(task_id: int, data: TaskUpdate) -> Task | None:
+    """요청에 담긴 값만 바꾼다. 카드가 없으면 None."""
+    with session() as conn:
+        cur = conn.execute(
+            "UPDATE tasks SET status = ?, updated_at = ? WHERE id = ?",
+            (data.status.value, _now(), task_id),
+        )
+        if cur.rowcount == 0:
+            return None
+        row = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+    return _to_task(row)
 
 
 def create_task(data: TaskCreate) -> Task:

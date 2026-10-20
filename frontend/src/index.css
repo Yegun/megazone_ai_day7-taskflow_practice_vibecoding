@@ -109,3 +109,90 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+main {
+  padding: 0 24px 32px;
+  text-align: left;
+}
+
+main > h1 {
+  text-align: center;
+}
+
+.task-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.task-form input {
+  flex: 1 1 200px;
+  padding: 8px 10px;
+  font: inherit;
+  color: var(--text-h);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.task-form button {
+  padding: 8px 16px;
+  font: inherit;
+  color: var(--text-h);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.hint,
+.error {
+  flex-basis: 100%;
+  color: #d33;
+  font-size: 14px;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  align-items: start;
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.task-column {
+  padding: 12px;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.task-column ul {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-height: 24px;
+}
+
+.task-card {
+  padding: 10px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  word-break: break-word;
+}
+
+.task-card strong {
+  color: var(--text-h);
+}
+
+.task-card p {
+  margin-top: 4px;
+  font-size: 14px;
+}

@@ -30,6 +30,16 @@ def update_task(task_id: int, data: TaskUpdate) -> Task:
     return task
 
 
+@router.delete("/{task_id}", status_code=204)
+def delete_task(task_id: int) -> None:
+    try:
+        deleted = db.delete_task(task_id)
+    except sqlite3.Error as exc:
+        raise STORAGE_ERROR from exc
+    if not deleted:
+        raise HTTPException(status_code=404, detail="카드를 찾을 수 없습니다.")
+
+
 @router.post("", status_code=201)
 def create_task(data: TaskCreate) -> Task:
     try:

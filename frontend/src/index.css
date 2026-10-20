@@ -197,6 +197,46 @@ main > h1 {
   font-size: 14px;
 }
 
+.task-card .actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.task-card .actions button {
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text-h);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.task-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-edit-form input,
+.task-edit-form textarea,
+.task-edit-form select {
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text-h);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.task-edit-form textarea {
+  min-height: 60px;
+  resize: vertical;
+}
+
 .task-card select {
   display: block;
   margin-top: 8px;

@@ -1,11 +1,32 @@
+import { useState } from 'react'
 import { STATUSES, STATUS_LABEL, type Status, type Task } from '../types'
+import TaskEditForm from './TaskEditForm'
 
 interface Props {
   task: Task
   onChangeStatus: (task: Task, status: Status) => void
+  onSave: (
+    task: Task,
+    input: { title: string; description: string; status: Status },
+  ) => Promise<boolean>
+  onDelete: (task: Task) => void
 }
 
-function TaskCard({ task, onChangeStatus }: Props) {
+function TaskCard({ task, onChangeStatus, onSave, onDelete }: Props) {
+  const [editing, setEditing] = useState(false)
+
+  if (editing) {
+    return (
+      <li className="task-card">
+        <TaskEditForm
+          task={task}
+          onSave={(input) => onSave(task, input)}
+          onCancel={() => setEditing(false)}
+        />
+      </li>
+    )
+  }
+
   return (
     <li className="task-card">
       <strong>{task.title}</strong>
@@ -22,6 +43,14 @@ function TaskCard({ task, onChangeStatus }: Props) {
           </option>
         ))}
       </select>
+      <div className="actions">
+        <button type="button" onClick={() => setEditing(true)}>
+          수정
+        </button>
+        <button type="button" onClick={() => onDelete(task)}>
+          삭제
+        </button>
+      </div>
     </li>
   )
 }

@@ -1,6 +1,6 @@
 from enum import StrEnum
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 
 class Status(StrEnum):
@@ -29,7 +29,23 @@ class TaskCreate(BaseModel):
 
 
 class TaskUpdate(BaseModel):
-    status: Status
+    """보낸 값만 바꾼다. 보내지 않은 값은 그대로 둔다. 설명은 ""를 보내 비운다."""
+
+    title: str | None = None
+    description: str | None = None
+    status: Status | None = None
+
+    @field_validator("title")
+    @classmethod
+    def title_not_blank(cls, value: str | None) -> str | None:
+        return None if value is None else _strip_title(value)
+
+    @model_validator(mode="after")
+    def at_least_one_value(self) -> "TaskUpdate":
+        sent = {k: getattr(self, k) for k in self.model_fields_set}
+        if not sent or any(v is None for v in sent.values()):
+            raise ValueError("title, description, status 중 바꿀 값을 null 없이 하나 이상 보내야 합니다.")
+        return self
 
 
 class Task(BaseModel):

@@ -20,6 +20,22 @@ SCENARIO-REVIEW.md의 시나리오 예상결과와 실제 결과가 다르게 �
 
 ### 증거
 
+Payload: 
+status
+: 
+"IN_PROGRESS"
+
+Response
+{
+    "id": 16,
+    "title": "안녕",
+    "description": "",
+    "status": "TODO",
+    "created_at": "2026-10-21T06:28:21+00:00",
+    "updated_at": "2026-10-21T06:29:23+00:00"
+}
+
+
 ### 상태
 - 해결중
 

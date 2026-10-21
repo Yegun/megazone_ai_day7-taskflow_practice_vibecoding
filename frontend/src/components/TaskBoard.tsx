@@ -84,9 +84,11 @@ function TaskBoard() {
     }
   }
 
-  function handleChangeStatus(task: Task, status: Status) {
+  async function handleChangeStatus(task: Task, status: Status) {
     if (status === task.status) return
-    void handleUpdate(task, { status }, '상태를 바꾸지 못했습니다.')
+    const ok = await handleUpdate(task, { status }, '상태를 바꾸지 못했습니다.')
+    // 저장된 값과 화면이 어긋나지 않게 성공 뒤에 목록을 다시 불러온다. (D-003)
+    if (ok) refresh()
   }
 
   function handleSave(

@@ -48,13 +48,6 @@ def init_db() -> None:
         raise RuntimeError("저장소 구조가 최신이 아닙니다. backend 에서 `alembic upgrade head` 를 실행하세요.")
 
 
-def migrated_user_id() -> int:
-    """임시: 로그인 API(단위 2~3)가 붙기 전까지 모든 요청을 이전용 사용자로 처리한다."""
-    with session() as conn:
-        row = conn.execute("SELECT id FROM users WHERE username = ?", (MIGRATED_USERNAME,)).fetchone()
-    return row["id"]
-
-
 def _now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
 

@@ -13,6 +13,10 @@ export function isNotFound(e: unknown): boolean {
   return e instanceof ApiError && e.status === 404
 }
 
+export function isUnauthorized(e: unknown): boolean {
+  return e instanceof ApiError && e.status === 401
+}
+
 // 사용자에게 보여 줄 실패 원인. 연결 불가(fetch 실패, 프록시의 5xx) · 입력 오류 · 없는 카드를 구분한다.
 export function describeError(e: unknown): string {
   if (e instanceof ApiError) {
@@ -22,7 +26,7 @@ export function describeError(e: unknown): string {
   return '서버에 연결하지 못했거나 저장에 실패했습니다. 서버가 켜져 있는지 확인해 주세요.'
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     ...init,
     headers: { 'Content-Type': 'application/json', ...init?.headers },

@@ -4,6 +4,7 @@ import {
   deleteTask,
   describeError,
   isNotFound,
+  isUnauthorized,
   listTasks,
   updateTask,
 } from '../api/tasks'
@@ -14,7 +15,12 @@ import TaskForm from './TaskForm'
 
 type LoadState = 'loading' | 'ready' | 'failed'
 
-function TaskBoard() {
+interface Props {
+  // 세션이 만료되어 401 을 받았을 때. 로그인 화면으로 돌아간다.
+  onUnauthorized: () => void
+}
+
+function TaskBoard({ onUnauthorized }: Props) {
   // 불러오기 실패(failed)는 빈 목록(ready + [])과 구분해서 보여 준다.
   const [loadState, setLoadState] = useState<LoadState>('loading')
   const [tasks, setTasks] = useState<Task[]>([])
@@ -29,10 +35,11 @@ function TaskBoard() {
         setLoadState('ready')
       })
       .catch((e: unknown) => {
+        if (isUnauthorized(e)) return onUnauthorized()
         setLoadError(describeError(e))
         setLoadState('failed')
       })
-  }, [])
+  }, [onUnauthorized])
 
   // 처음 열 때. 상태는 이미 'loading' 이다.
   useEffect(fetchTasks, [fetchTasks])
@@ -50,6 +57,7 @@ function TaskBoard() {
   }
 
   function fail(message: string, e: unknown) {
+    if (isUnauthorized(e)) return onUnauthorized()
     setError(`${message} ${describeError(e)}`)
     if (isNotFound(e)) refresh()
   }

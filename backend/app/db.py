@@ -5,7 +5,7 @@ from contextlib import contextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 
-from .schemas import Status, Task, TaskCreate, TaskUpdate
+from .schemas import MIGRATED_USERNAME, Status, Task, TaskCreate, TaskUpdate, User
 
 DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent / "data" / "taskflow.db"
 
@@ -46,9 +46,6 @@ def init_db() -> None:
         )
     if not {"users", "sessions"} <= tables or not has_owner:
         raise RuntimeError("저장소 구조가 최신이 아닙니다. backend 에서 `alembic upgrade head` 를 실행하세요.")
-
-
-MIGRATED_USERNAME = "migrated@test.com"
 
 
 def migrated_user_id() -> int:
@@ -115,3 +112,65 @@ def create_task(owner_id: int, data: TaskCreate) -> Task:
         )
         row = conn.execute(f"SELECT {_TASK_COLUMNS} FROM tasks WHERE id = ?", (cur.lastrowid,)).fetchone()
     return _to_task(row)
+
+
+# ---- users · sessions (R-008) ----
+
+
+def get_user_by_username(username: str) -> sqlite3.Row | None:
+    with session() as conn:
+        return conn.execute(
+            "SELECT id, username, password_hash FROM users WHERE username = ?", (username,)
+        ).fetchone()
+
+
+def create_user(username: str, password_hash: str) -> User:
+    """이미 있는 아이디면 sqlite3.IntegrityError."""
+    with session() as conn:
+        cur = conn.execute(
+            "INSERT INTO users (username, password_hash, created_at) VALUES (?, ?, ?)",
+            (username, password_hash, _now()),
+        )
+    return User(id=cur.lastrowid, username=username)
+
+
+def claim_migrated_user(password_hash: str) -> User | None:
+    """비밀번호가 아직 없는 이전용 계정에 비밀번호를 정한다 (D-016). 이미 받아 갔으면 None."""
+    with session() as conn:
+        cur = conn.execute(
+            "UPDATE users SET password_hash = ? WHERE username = ? AND password_hash IS NULL",
+            (password_hash, MIGRATED_USERNAME),
+        )
+        if cur.rowcount == 0:
+            return None
+        row = conn.execute("SELECT id, username FROM users WHERE username = ?", (MIGRATED_USERNAME,)).fetchone()
+    return User(**dict(row))
+
+
+def create_session(session_id: str, user_id: int, expires_at: str) -> None:
+    with session() as conn:
+        conn.execute(
+            "INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)",
+            (session_id, user_id, _now(), expires_at),
+        )
+
+
+def get_session_user(session_id: str, now: str) -> User | None:
+    """만료되지 않은 세션의 사용자. 없거나 만료면 None. now 와 expires_at 은 같은 UTC 형식 문자열."""
+    with session() as conn:
+        row = conn.execute(
+            "SELECT u.id, u.username FROM sessions s JOIN users u ON u.id = s.user_id"
+            " WHERE s.id = ? AND s.expires_at > ?",
+            (session_id, now),
+        ).fetchone()
+    return None if row is None else User(**dict(row))
+
+
+def delete_session(session_id: str) -> None:
+    with session() as conn:
+        conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+
+
+def delete_expired_sessions(now: str) -> None:
+    with session() as conn:
+        conn.execute("DELETE FROM sessions WHERE expires_at <= ?", (now,))

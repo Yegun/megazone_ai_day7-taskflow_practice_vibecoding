@@ -6,4 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi",
     "uvicorn",
+    "alembic>=1.20.1",
+    "sqlalchemy>=2.1.6",
+    "argon2-cffi>=25.1.0",
 ]

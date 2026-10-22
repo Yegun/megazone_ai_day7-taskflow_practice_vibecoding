@@ -8,6 +8,7 @@ from pydantic import ValidationError
 
 from app import db
 from app.schemas import Status, TaskCreate
+from tests.live_server import upgrade_db
 
 
 class DbTestCase(unittest.TestCase):
@@ -20,35 +21,58 @@ class DbTestCase(unittest.TestCase):
 
 
 class InitDbTest(DbTestCase):
-    def test_creates_file_and_starts_empty(self) -> None:
-        self.assertFalse(self.path.exists())
+    def _upgrade(self) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        upgrade_db(str(self.path))
+
+    def test_init_refuses_when_schema_is_not_migrated(self) -> None:
+        with self.assertRaises(RuntimeError):
+            db.init_db()
+
+    def test_init_creates_folder_and_starts_empty_after_upgrade(self) -> None:
+        self._upgrade()
         db.init_db()
         self.assertTrue(self.path.exists())
-        self.assertEqual(db.list_tasks(), [])
+        self.assertEqual(db.list_tasks(db.migrated_user_id()), [])
 
     def test_init_twice_keeps_data(self) -> None:
+        self._upgrade()
         db.init_db()
-        db.create_task(TaskCreate(title="a"))
+        owner = db.migrated_user_id()
+        db.create_task(owner, TaskCreate(title="a"))
         db.init_db()
-        self.assertEqual(len(db.list_tasks()), 1)
+        self.assertEqual(len(db.list_tasks(owner)), 1)
 
     def test_storage_rejects_status_outside_three_values(self) -> None:
-        db.init_db()
+        self._upgrade()
         with self.assertRaises(sqlite3.IntegrityError):
             with db.session() as conn:
                 conn.execute(
-                    "INSERT INTO tasks (title, description, status, created_at, updated_at)"
-                    " VALUES ('x', '', 'ARCHIVED', 'n', 'n')"
+                    "INSERT INTO tasks (title, description, status, created_at, updated_at, owner_id)"
+                    " VALUES ('x', '', 'ARCHIVED', 'n', 'n', ?)",
+                    (db.migrated_user_id(),),
+                )
+
+    def test_storage_rejects_task_without_existing_owner(self) -> None:
+        self._upgrade()
+        with self.assertRaises(sqlite3.IntegrityError):
+            with db.session() as conn:
+                conn.execute(
+                    "INSERT INTO tasks (title, description, status, created_at, updated_at, owner_id)"
+                    " VALUES ('x', '', 'TODO', 'n', 'n', 9999)"
                 )
 
 
 class CreateTaskTest(DbTestCase):
     def setUp(self) -> None:
         super().setUp()
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        upgrade_db(str(self.path))
         db.init_db()
+        self.owner = db.migrated_user_id()
 
     def test_new_task_is_todo_with_id_and_times(self) -> None:
-        task = db.create_task(TaskCreate(title="  할 일  ", description="설명"))
+        task = db.create_task(self.owner, TaskCreate(title="  할 일  ", description="설명"))
         self.assertEqual(task.title, "할 일")
         self.assertEqual(task.description, "설명")
         self.assertEqual(task.status, Status.TODO)
@@ -56,12 +80,12 @@ class CreateTaskTest(DbTestCase):
         self.assertGreater(task.id, 0)
 
     def test_description_defaults_to_empty_string(self) -> None:
-        self.assertEqual(db.create_task(TaskCreate(title="a")).description, "")
+        self.assertEqual(db.create_task(self.owner, TaskCreate(title="a")).description, "")
 
     def test_list_is_in_registration_order_and_survives_new_connection(self) -> None:
-        first = db.create_task(TaskCreate(title="1"))
-        second = db.create_task(TaskCreate(title="2"))
-        self.assertEqual([t.id for t in db.list_tasks()], [first.id, second.id])
+        first = db.create_task(self.owner, TaskCreate(title="1"))
+        second = db.create_task(self.owner, TaskCreate(title="2"))
+        self.assertEqual([t.id for t in db.list_tasks(self.owner)], [first.id, second.id])
 
 
 class TitleValidationTest(unittest.TestCase):

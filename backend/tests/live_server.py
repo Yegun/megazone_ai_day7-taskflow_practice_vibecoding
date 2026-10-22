@@ -15,6 +15,17 @@ from pathlib import Path
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 
 
+def upgrade_db(db_file: str) -> None:
+    """임시 DB 에 Alembic 마이그레이션을 끝까지 적용한다 (원본 DB 가 아니다)."""
+    subprocess.run(
+        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        cwd=BACKEND_DIR,
+        env={**os.environ, "TASKFLOW_DB": db_file},
+        check=True,
+        capture_output=True,
+    )
+
+
 def _free_port() -> int:
     with socket.socket() as s:
         s.bind(("127.0.0.1", 0))
@@ -28,6 +39,7 @@ class LiveServerTestCase(unittest.TestCase):
         self.db_file = str(Path(self._tmp.name) / "live.db")
         self.port = _free_port()
         self.proc: subprocess.Popen[bytes] | None = None
+        upgrade_db(self.db_file)
         self.start_server()
         self.addCleanup(self.stop_server)
 

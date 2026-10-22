@@ -14,7 +14,7 @@ STORAGE_ERROR = HTTPException(status_code=500, detail="저장소 오류가 발�
 @router.get("")
 def list_tasks() -> list[Task]:
     try:
-        return db.list_tasks()
+        return db.list_tasks(db.migrated_user_id())
     except sqlite3.Error as exc:
         raise STORAGE_ERROR from exc
 
@@ -22,7 +22,7 @@ def list_tasks() -> list[Task]:
 @router.patch("/{task_id}")
 def update_task(task_id: int, data: TaskUpdate) -> Task:
     try:
-        task = db.update_task(task_id, data)
+        task = db.update_task(db.migrated_user_id(), task_id, data)
     except sqlite3.Error as exc:
         raise STORAGE_ERROR from exc
     if task is None:
@@ -33,7 +33,7 @@ def update_task(task_id: int, data: TaskUpdate) -> Task:
 @router.delete("/{task_id}", status_code=204)
 def delete_task(task_id: int) -> None:
     try:
-        deleted = db.delete_task(task_id)
+        deleted = db.delete_task(db.migrated_user_id(), task_id)
     except sqlite3.Error as exc:
         raise STORAGE_ERROR from exc
     if not deleted:
@@ -43,6 +43,6 @@ def delete_task(task_id: int) -> None:
 @router.post("", status_code=201)
 def create_task(data: TaskCreate) -> Task:
     try:
-        return db.create_task(data)
+        return db.create_task(db.migrated_user_id(), data)
     except sqlite3.Error as exc:
         raise STORAGE_ERROR from exc

@@ -1,3 +1,4 @@
+import re
 from enum import StrEnum
 
 from pydantic import BaseModel, field_validator, model_validator
@@ -55,3 +56,47 @@ class Task(BaseModel):
     status: Status
     created_at: str
     updated_at: str
+
+
+MIGRATED_USERNAME = "migrated@test.com"
+_USERNAME_RE = re.compile(r"^[a-z0-9]{4,20}$")
+
+
+class Credentials(BaseModel):
+    """가입 · 로그인 요청. 아이디는 영문 · 숫자 4~20자이고 대소문자를 구분하지 않는다(소문자로 저장).
+    이전용 계정 migrated@test.com 만 예외로 받는다 (D-016)."""
+
+    username: str
+    password: str
+
+    @field_validator("username")
+    @classmethod
+    def username_rule(cls, value: str) -> str:
+        name = value.strip().lower()
+        if name != MIGRATED_USERNAME and not _USERNAME_RE.fullmatch(name):
+            raise ValueError("아이디는 영문 · 숫자 4~20자로 입력해야 합니다.")
+        return name
+
+    @field_validator("password")
+    @classmethod
+    def password_rule(cls, value: str) -> str:
+        if not 8 <= len(value) <= 128:
+            raise ValueError("비밀번호는 8~128자로 입력해야 합니다.")
+        return value
+
+
+class Login(BaseModel):
+    """로그인 요청. 형식 오류와 불일치를 구분하지 않도록 규칙 검사 없이 받는다."""
+
+    username: str
+    password: str
+
+    @field_validator("username")
+    @classmethod
+    def normalize(cls, value: str) -> str:
+        return value.strip().lower()
+
+
+class User(BaseModel):
+    id: int
+    username: str

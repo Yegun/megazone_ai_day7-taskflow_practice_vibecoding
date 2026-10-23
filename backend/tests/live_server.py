@@ -15,10 +15,10 @@ from pathlib import Path
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 
 
-def upgrade_db(db_file: str) -> None:
-    """임시 DB 에 Alembic 마이그레이션을 끝까지 적용한다 (원본 DB 가 아니다)."""
+def upgrade_db(db_file: str, target: str = "head") -> None:
+    """임시 DB 에 Alembic 마이그레이션을 target 까지 적용한다 (원본 DB 가 아니다)."""
     subprocess.run(
-        [sys.executable, "-m", "alembic", "upgrade", "head"],
+        [sys.executable, "-m", "alembic", "upgrade", target],
         cwd=BACKEND_DIR,
         env={**os.environ, "TASKFLOW_DB": db_file},
         check=True,

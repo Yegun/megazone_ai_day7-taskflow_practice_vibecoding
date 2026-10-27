@@ -2,7 +2,7 @@ import os
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 
 from .schemas import MIGRATED_USERNAME, Status, Task, TaskCreate, TaskUpdate, User
@@ -41,15 +41,20 @@ def init_db() -> None:
     db_path().parent.mkdir(parents=True, exist_ok=True)
     with session() as conn:
         tables = {r["name"] for r in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
-        has_owner = "tasks" in tables and any(
-            r["name"] == "owner_id" for r in conn.execute("PRAGMA table_info(tasks)")
+        task_columns = (
+            {r["name"] for r in conn.execute("PRAGMA table_info(tasks)")} if "tasks" in tables else set()
         )
-    if not {"users", "sessions"} <= tables or not has_owner:
+    if not {"users", "sessions"} <= tables or not {"owner_id", "priority", "due_date"} <= task_columns:
         raise RuntimeError("저장소 구조가 최신이 아닙니다. backend 에서 `alembic upgrade head` 를 실행하세요.")
 
 
 def _now() -> str:
     return datetime.now(UTC).isoformat(timespec="seconds")
+
+
+def _today() -> str:
+    """기한 초과의 기준이 되는 오늘. 서버 PC 의 로컬 날짜다 (이슈 #26)."""
+    return date.today().isoformat()
 
 
 def _to_task(row: sqlite3.Row) -> Task:
@@ -60,14 +65,24 @@ def list_tasks(owner_id: int) -> list[Task]:
     """owner_id 의 카드만 돌려준다 (R-008)."""
     with session() as conn:
         rows = conn.execute(
-            "SELECT id, title, description, status, created_at, updated_at"
-            " FROM tasks WHERE owner_id = ? ORDER BY id",
-            (owner_id,),
+            f"SELECT {_TASK_COLUMNS} FROM tasks WHERE owner_id = ? ORDER BY {_SORT_ORDER}",
+            (_today(), owner_id),
         ).fetchall()
     return [_to_task(r) for r in rows]
 
 
-_TASK_COLUMNS = "id, title, description, status, created_at, updated_at"
+# `?` 하나는 오늘 날짜다. 기한 초과: 마감일이 오늘보다 이전이고 완료가 아닌 카드 (R-010).
+_TASK_COLUMNS = (
+    "id, title, description, status, priority, due_date,"
+    " CASE WHEN due_date < ? AND status != 'DONE' THEN 1 ELSE 0 END AS is_overdue,"
+    " created_at, updated_at"
+)
+# 서버 정렬 (R-011): ① 기한 초과 ② 우선순위 높음 먼저 ③ 가까운 마감일(없으면 맨 뒤) ④ 만든 순서(id).
+_SORT_ORDER = (
+    "is_overdue DESC,"
+    " CASE priority WHEN 'HIGH' THEN 0 WHEN 'NORMAL' THEN 1 ELSE 2 END,"
+    " due_date IS NULL, due_date, id"
+)
 
 
 def update_task(owner_id: int, task_id: int, data: TaskUpdate) -> Task | None:
@@ -75,6 +90,10 @@ def update_task(owner_id: int, task_id: int, data: TaskUpdate) -> Task | None:
     values = data.model_dump(exclude_unset=True)
     if "status" in values:
         values["status"] = values["status"].value
+    if "priority" in values:
+        values["priority"] = values["priority"].value
+    if values.get("due_date") is not None:
+        values["due_date"] = values["due_date"].isoformat()
     # 열 이름은 TaskUpdate 의 필드에서만 오므로 SQL 에 그대로 쓴다.
     assignments = ", ".join(f"{col} = ?" for col in [*values, "updated_at"])
     with session() as conn:
@@ -84,7 +103,7 @@ def update_task(owner_id: int, task_id: int, data: TaskUpdate) -> Task | None:
         )
         if cur.rowcount == 0:
             return None
-        row = conn.execute(f"SELECT {_TASK_COLUMNS} FROM tasks WHERE id = ?", (task_id,)).fetchone()
+        row = conn.execute(f"SELECT {_TASK_COLUMNS} FROM tasks WHERE id = ?", (_today(), task_id)).fetchone()
     return _to_task(row)
 
 
@@ -99,11 +118,20 @@ def create_task(owner_id: int, data: TaskCreate) -> Task:
     now = _now()
     with session() as conn:
         cur = conn.execute(
-            "INSERT INTO tasks (title, description, status, created_at, updated_at, owner_id)"
-            " VALUES (?, ?, ?, ?, ?, ?)",
-            (data.title, data.description, Status.TODO.value, now, now, owner_id),
+            "INSERT INTO tasks (title, description, status, priority, due_date, created_at, updated_at, owner_id)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                data.title,
+                data.description,
+                Status.TODO.value,
+                data.priority.value,
+                None if data.due_date is None else data.due_date.isoformat(),
+                now,
+                now,
+                owner_id,
+            ),
         )
-        row = conn.execute(f"SELECT {_TASK_COLUMNS} FROM tasks WHERE id = ?", (cur.lastrowid,)).fetchone()
+        row = conn.execute(f"SELECT {_TASK_COLUMNS} FROM tasks WHERE id = ?", (_today(), cur.lastrowid)).fetchone()
     return _to_task(row)
 
 

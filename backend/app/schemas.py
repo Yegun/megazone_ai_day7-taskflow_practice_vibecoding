@@ -1,4 +1,5 @@
 import re
+from datetime import date
 from enum import StrEnum
 
 from pydantic import BaseModel, field_validator, model_validator
@@ -12,6 +13,14 @@ class Status(StrEnum):
     DONE = "DONE"
 
 
+class Priority(StrEnum):
+    """허용 우선순위 세 값의 유일한 정의 (R-009). 저장소 CHECK 제약도 이 값을 쓴다."""
+
+    LOW = "LOW"
+    NORMAL = "NORMAL"
+    HIGH = "HIGH"
+
+
 def _strip_title(value: str) -> str:
     title = value.strip()
     if not title:
@@ -19,9 +28,26 @@ def _strip_title(value: str) -> str:
     return title
 
 
+_DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+def _strict_date(value: object) -> object:
+    """마감일은 YYYY-MM-DD 문자열만 받는다 (R-007). 없는 날짜(2026-02-30)는 이어지는 date 검증이 거절한다."""
+    if value is not None and not (isinstance(value, str) and _DATE_RE.fullmatch(value)):
+        raise ValueError("마감일은 YYYY-MM-DD 형식이어야 합니다.")
+    return value
+
+
 class TaskCreate(BaseModel):
     title: str
     description: str = ""
+    priority: Priority = Priority.NORMAL  # null 은 거절한다. 우선순위는 비울 수 없다 (R-009).
+    due_date: date | None = None
+
+    @field_validator("due_date", mode="before")
+    @classmethod
+    def due_date_format(cls, value: object) -> object:
+        return _strict_date(value)
 
     @field_validator("title")
     @classmethod
@@ -35,6 +61,13 @@ class TaskUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
     status: Status | None = None
+    priority: Priority | None = None  # 생략하면 유지. null 은 거절한다.
+    due_date: date | None = None  # 생략하면 유지. null 이면 마감일을 없앤다.
+
+    @field_validator("due_date", mode="before")
+    @classmethod
+    def due_date_format(cls, value: object) -> object:
+        return _strict_date(value)
 
     @field_validator("title")
     @classmethod
@@ -44,8 +77,10 @@ class TaskUpdate(BaseModel):
     @model_validator(mode="after")
     def at_least_one_value(self) -> "TaskUpdate":
         sent = {k: getattr(self, k) for k in self.model_fields_set}
-        if not sent or any(v is None for v in sent.values()):
-            raise ValueError("title, description, status 중 바꿀 값을 null 없이 하나 이상 보내야 합니다.")
+        if not sent or any(v is None for k, v in sent.items() if k != "due_date"):
+            raise ValueError(
+                "title, description, status, priority, due_date 중 바꿀 값을 하나 이상 보내야 합니다. due_date 외에는 null 을 보낼 수 없습니다."
+            )
         return self
 
 
@@ -54,6 +89,9 @@ class Task(BaseModel):
     title: str
     description: str
     status: Status
+    priority: Priority
+    due_date: str | None  # YYYY-MM-DD. 없으면 null
+    is_overdue: bool  # 마감일이 오늘보다 이전이고 완료가 아니면 true. 저장하지 않고 목록을 줄 때 계산한다 (R-010).
     created_at: str
     updated_at: str
 

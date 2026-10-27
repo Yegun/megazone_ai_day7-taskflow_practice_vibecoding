@@ -67,7 +67,7 @@ def tables(path: str) -> set[str]:
 
 
 class MigrationTest(unittest.TestCase):
-    """DATA-MIGRATION-PLAN 의 네 단계를 하나씩 올리며 단계마다 확인한다."""
+    """DATA-MIGRATION-PLAN 의 다섯 단계를 하나씩 올리며 단계마다 확인한다."""
 
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
@@ -137,6 +137,65 @@ class MigrationTest(unittest.TestCase):
         self.assertNotIn("tasks_new", tables(self.db))
         self.assertEqual(one(self.db, "SELECT version_num FROM alembic_version"), "0003")
 
+    def test_0005_adds_priority_and_due_date_and_keeps_everything(self) -> None:
+        self._make_old()
+        upgrade_db(self.db, "0004")
+        before = snapshot(self.db)
+        owners_before = one(self.db, "SELECT group_concat(owner_id) FROM tasks")
+        upgrade_db(self.db, "0005")
+        self.assertEqual(snapshot(self.db), before)  # 기존 열의 값은 그대로
+        self.assertEqual(one(self.db, "SELECT group_concat(owner_id) FROM tasks"), owners_before)
+        cols = columns(self.db, "tasks")
+        self.assertEqual(cols["priority"], ("TEXT", 1))  # 필수
+        self.assertEqual(cols["due_date"], ("TEXT", 0))  # 비워도 됨
+        self.assertEqual(one(self.db, "SELECT COUNT(*) FROM tasks WHERE priority = 'NORMAL'"), 3)
+        self.assertEqual(one(self.db, "SELECT COUNT(*) FROM tasks WHERE due_date IS NULL"), 3)
+        self.assertEqual(one(self.db, "SELECT version_num FROM alembic_version"), "0005")
+
+    def test_0005_keeps_old_constraints(self) -> None:
+        self._make_old()
+        upgrade_db(self.db)
+        conn = sqlite3.connect(self.db)
+        conn.execute("PRAGMA foreign_keys = ON")
+        insert = (
+            "INSERT INTO tasks (title, status, created_at, updated_at, owner_id) VALUES ('x', ?, 'n', 'n', ?)"
+        )
+        with self.assertRaises(sqlite3.IntegrityError):
+            conn.execute(insert, ("WAITING", 1))  # status CHECK
+        with self.assertRaises(sqlite3.IntegrityError):
+            conn.execute(insert, ("TODO", 9999))  # owner_id 외래키
+        conn.close()
+
+    def test_0005_storage_rejects_bad_priority_and_due_date(self) -> None:
+        self._make_old()
+        upgrade_db(self.db)
+        conn = sqlite3.connect(self.db)
+        insert = (
+            "INSERT INTO tasks (title, status, created_at, updated_at, owner_id, priority, due_date)"
+            " VALUES ('x', 'TODO', 'n', 'n', 1, ?, ?)"
+        )
+        bad = [("URGENT", None), ("normal", None), (None, None), ("LOW", "2026-02-30"), ("LOW", "2026-9-3")]
+        for priority, due in bad:
+            with self.subTest(priority=priority, due=due), self.assertRaises(sqlite3.IntegrityError):
+                conn.execute(insert, (priority, due))
+        for priority, due in [("LOW", None), ("NORMAL", "2020-01-01"), ("HIGH", "2026-12-31")]:
+            conn.execute(insert, (priority, due))  # 세 값과 지난 날짜는 받는다
+        conn.close()
+
+    def test_0005_failure_rolls_back_and_keeps_data(self) -> None:
+        self._make_old()
+        upgrade_db(self.db, "0004")
+        before = snapshot(self.db)
+        conn = sqlite3.connect(self.db)  # priority 열이 이미 있어 0005 가 중간에 실패하는 상황
+        conn.execute("ALTER TABLE tasks ADD COLUMN priority TEXT NOT NULL DEFAULT 'NORMAL'")
+        conn.commit()
+        conn.close()
+        with self.assertRaises(Exception):
+            upgrade_db(self.db, "0005")
+        self.assertEqual(snapshot(self.db), before)
+        self.assertEqual(one(self.db, "SELECT COUNT(*) FROM tasks"), 3)
+        self.assertEqual(one(self.db, "SELECT version_num FROM alembic_version"), "0004")
+
     def test_new_task_id_continues_after_old_max_even_if_last_was_deleted(self) -> None:
         self._make_old(deleted_last=True)
         upgrade_db(self.db)
@@ -154,8 +213,11 @@ class MigrationTest(unittest.TestCase):
         self._make_old()
         upgrade_db(self.db)
         before = snapshot(self.db)
+        new_cols = "SELECT group_concat(priority || ':' || ifnull(due_date, '-')) FROM tasks"
+        new_before = one(self.db, new_cols)
         upgrade_db(self.db)
         self.assertEqual(snapshot(self.db), before)
+        self.assertEqual(one(self.db, new_cols), new_before)
         self.assertEqual(one(self.db, "SELECT COUNT(*) FROM users"), 1)
 
     def test_fresh_database_gets_full_schema(self) -> None:
@@ -163,6 +225,8 @@ class MigrationTest(unittest.TestCase):
         self.assertEqual(one(self.db, "SELECT COUNT(*) FROM tasks"), 0)
         self.assertEqual(one(self.db, "SELECT username FROM users"), "migrated@test.com")
         self.assertEqual(columns(self.db, "tasks")["owner_id"], ("INTEGER", 1))
+        self.assertEqual(columns(self.db, "tasks")["priority"], ("TEXT", 1))
+        self.assertEqual(columns(self.db, "tasks")["due_date"], ("TEXT", 0))
 
 
 if __name__ == "__main__":

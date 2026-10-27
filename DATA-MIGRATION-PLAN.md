@@ -138,3 +138,13 @@ DATA-MODEL 4절의 "소유자 · 사용자 값 없음"은 이 계획이 확정�
 | (번호 없음) | 백업 파일 이름 · 위치 · 보관 기간 | 4.1, 4.6 |
 | (번호 없음) | 이전용 계정(D-016): 식별자 형식 충돌, 가입 때 이 계정을 받는 흐름의 구분, 이메일 소유 확인 없음 | 5 |
 | (번호 없음) | 마이그레이션 실행 방식 · 재실행 안전 · init_db 변경 | 6 |
+
+## 9. 0005: priority · due_date 열 추가 (#26)
+
+- 파일: `backend/migrations/versions/0005_priority_due_date.py` (직접 작성, autogenerate 안 씀). 앞 단계는 0004.
+- `tasks.priority`: `TEXT NOT NULL DEFAULT 'NORMAL'`, `CHECK (priority IN ('LOW','NORMAL','HIGH'))`. 기존 Task 는 모두 NORMAL.
+- `tasks.due_date`: `TEXT` (NULL 허용), `CHECK (date(due_date) IS due_date)` 로 YYYY-MM-DD 만 받는다. 기존 Task 는 모두 NULL.
+- 열만 추가한다(테이블 재생성 없음). 기존 행 · status CHECK · owner_id 외래키 · 자동 증가 id 는 그대로다.
+- downgrade 는 만들지 않는다. 되돌리기는 적용 전 백업 파일로 한다. (4.6)
+- 원본 DB(`backend/data/taskflow.db`)에는 이 문서 4절 순서(백업 → 복사본 실행 → 수량 비교)를 마친 뒤 사람이 `alembic upgrade head` 를 실행한다. 에이전트는 실행하지 않는다.
+- 적용 뒤 확인: Task 수 · owner 별 수 · 비교용 Task(16 · 18 · 22)의 기존 열 값이 그대로이고, 모두 priority = NORMAL · due_date = NULL.

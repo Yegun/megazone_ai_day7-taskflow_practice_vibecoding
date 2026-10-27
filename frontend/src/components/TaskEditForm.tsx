@@ -1,16 +1,21 @@
 import { useState, type FormEvent } from 'react'
-import { STATUSES, STATUS_LABEL, type Status, type Task } from '../types'
+import {
+  PRIORITIES,
+  PRIORITY_LABEL,
+  STATUSES,
+  STATUS_LABEL,
+  type Priority,
+  type Status,
+  type Task,
+  type TaskEdit,
+} from '../types'
 
 export const UNTITLED = '제목없음'
 
 interface Props {
   task: Task
   // 저장이 성공하면 true. 실패하면 false 를 돌려주고 폼을 열어 둔다.
-  onSave: (input: {
-    title: string
-    description: string
-    status: Status
-  }) => Promise<boolean>
+  onSave: (input: TaskEdit) => Promise<boolean>
   onCancel: () => void
 }
 
@@ -18,13 +23,22 @@ function TaskEditForm({ task, onSave, onCancel }: Props) {
   const [title, setTitle] = useState(task.title)
   const [description, setDescription] = useState(task.description)
   const [status, setStatus] = useState<Status>(task.status)
+  const [priority, setPriority] = useState<Priority>(task.priority)
+  const [dueDate, setDueDate] = useState(task.due_date ?? '')
   const [saving, setSaving] = useState(false)
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setSaving(true)
     // 제목을 비우고 저장하면 '제목없음'으로 채워 그 값으로 저장한다. (R-004)
-    const ok = await onSave({ title: title.trim() || UNTITLED, description, status })
+    // 우선순위 · 마감일은 바꾼 때만 담는다. 건드리지 않으면 서버의 기존 값이 유지된다. 마감일을 지우면 null.
+    const ok = await onSave({
+      title: title.trim() || UNTITLED,
+      description,
+      status,
+      ...(priority !== task.priority && { priority }),
+      ...(dueDate !== (task.due_date ?? '') && { due_date: dueDate || null }),
+    })
     setSaving(false)
     if (ok) onCancel()
   }
@@ -54,6 +68,32 @@ function TaskEditForm({ task, onSave, onCancel }: Props) {
           </option>
         ))}
       </select>
+      <select
+        aria-label="우선순위"
+        value={priority}
+        onChange={(e) => setPriority(e.target.value as Priority)}
+      >
+        {PRIORITIES.map((p) => (
+          <option key={p} value={p}>
+            우선순위 {PRIORITY_LABEL[p]}
+          </option>
+        ))}
+      </select>
+      <div className="due-field">
+        <input
+          type="date"
+          aria-label="마감일"
+          value={dueDate}
+          onChange={(e) => setDueDate(e.target.value)}
+        />
+        <button
+          type="button"
+          onClick={() => setDueDate('')}
+          disabled={saving || !dueDate}
+        >
+          마감일 지우기
+        </button>
+      </div>
       <div className="actions">
         <button type="submit" disabled={saving}>
           저장

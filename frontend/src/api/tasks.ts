@@ -1,4 +1,4 @@
-import type { Status, Task } from '../types'
+import type { Priority, Status, Task } from '../types'
 
 export class ApiError extends Error {
   status: number
@@ -40,10 +40,16 @@ export function listTasks(): Promise<Task[]> {
   return request('/api/tasks')
 }
 
-// 보낸 값만 바뀐다. 설명을 비우려면 '' 를 보낸다.
+// 보낸 값만 바뀐다. 설명을 비우려면 '' 를, 마감일을 지우려면 null 을 보낸다.
 export function updateTask(
   id: number,
-  input: { title?: string; description?: string; status?: Status },
+  input: {
+    title?: string
+    description?: string
+    status?: Status
+    priority?: Priority
+    due_date?: string | null
+  },
 ): Promise<Task> {
   return request(`/api/tasks/${id}`, {
     method: 'PATCH',
@@ -55,9 +61,12 @@ export function deleteTask(id: number): Promise<void> {
   return request(`/api/tasks/${id}`, { method: 'DELETE' })
 }
 
+// 우선순위를 담지 않으면 보통, 마감일을 담지 않으면 마감일 없음으로 저장된다.
 export function createTask(input: {
   title: string
   description: string
+  priority?: Priority
+  due_date?: string
 }): Promise<Task> {
   return request('/api/tasks', { method: 'POST', body: JSON.stringify(input) })
 }

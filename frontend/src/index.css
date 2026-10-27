@@ -136,6 +136,15 @@ main > h1 {
   border-radius: 6px;
 }
 
+.task-form select {
+  padding: 8px 10px;
+  font: inherit;
+  color: var(--text-h);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
 .task-form button {
   padding: 8px 16px;
   font: inherit;
@@ -230,6 +239,40 @@ main > h1 {
   font-size: 14px;
 }
 
+.task-card.overdue {
+  border-color: #d33;
+  border-left-width: 4px;
+}
+
+.task-card .meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.task-card .badge {
+  padding: 1px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-h);
+}
+
+.task-card .priority-high {
+  font-weight: 600;
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+/* 기한 초과: 색과 함께 텍스트("기한 초과")로 표시한다. */
+.task-card .overdue-badge {
+  font-weight: 600;
+  color: #d33;
+  border-color: #d33;
+}
+
 .task-card .actions {
   display: flex;
   gap: 8px;
@@ -263,6 +306,28 @@ main > h1 {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 6px;
+}
+
+.task-edit-form .due-field {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.task-edit-form .due-field button {
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text-h);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.task-edit-form .due-field button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .task-edit-form textarea {

@@ -1,14 +1,11 @@
-import { STATUS_LABEL, type Status, type Task } from '../types'
+import { STATUS_LABEL, type Status, type Task, type TaskEdit } from '../types'
 import TaskCard from './TaskCard'
 
 interface Props {
   status: Status
   tasks: Task[]
   onChangeStatus: (task: Task, status: Status) => void
-  onSave: (
-    task: Task,
-    input: { title: string; description: string; status: Status },
-  ) => Promise<boolean>
+  onSave: (task: Task, input: TaskEdit) => Promise<boolean>
   onDelete: (task: Task) => void
 }
 

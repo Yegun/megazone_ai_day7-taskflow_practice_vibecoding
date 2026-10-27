@@ -33,6 +33,12 @@ class InitDbTest(DbTestCase):
         with self.assertRaises(RuntimeError):
             db.init_db()
 
+    def test_init_refuses_when_schema_stops_at_0004(self) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        upgrade_db(str(self.path), "0004")
+        with self.assertRaises(RuntimeError):
+            db.init_db()
+
     def test_init_creates_folder_and_starts_empty_after_upgrade(self) -> None:
         self._upgrade()
         db.init_db()

@@ -8,7 +8,7 @@ import {
   listTasks,
   updateTask,
 } from '../api/tasks'
-import { STATUSES, type Status, type Task } from '../types'
+import { STATUSES, type Priority, type Status, type Task, type TaskEdit } from '../types'
 import StatusMessage from './StatusMessage'
 import TaskColumn from './TaskColumn'
 import TaskForm from './TaskForm'
@@ -62,12 +62,19 @@ function TaskBoard({ onUnauthorized }: Props) {
     if (isNotFound(e)) refresh()
   }
 
-  async function handleCreate(input: { title: string; description: string }) {
+  async function handleCreate(input: {
+    title: string
+    description: string
+    priority: Priority
+    due_date?: string
+  }) {
     try {
       const created = await createTask(input)
       // 성공 응답을 받은 뒤에만 목록을 바꾼다. (D-003)
       setTasks((prev) => [...prev, created])
       setError('')
+      // 순서는 서버가 정한다. 다시 불러와 서버 정렬을 따른다. (R-011)
+      refresh()
       return true
     } catch (e) {
       fail('등록하지 못했습니다.', e)
@@ -78,13 +85,15 @@ function TaskBoard({ onUnauthorized }: Props) {
   // 상태 변경과 내용 수정이 같은 흐름이다. 성공 응답을 받은 뒤에만 바꾼다. (D-003)
   async function handleUpdate(
     task: Task,
-    input: { title?: string; description?: string; status?: Status },
+    input: Partial<TaskEdit>,
     failMessage: string,
   ) {
     try {
       const updated = await updateTask(task.id, input)
       setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)))
       setError('')
+      // 우선순위 · 마감일 · 상태가 바뀌면 순서도 바뀐다. 서버 정렬을 다시 받는다. (R-011)
+      refresh()
       return true
     } catch (e) {
       fail(failMessage, e)
@@ -94,15 +103,10 @@ function TaskBoard({ onUnauthorized }: Props) {
 
   async function handleChangeStatus(task: Task, status: Status) {
     if (status === task.status) return
-    const ok = await handleUpdate(task, { status }, '상태를 바꾸지 못했습니다.')
-    // 저장된 값과 화면이 어긋나지 않게 성공 뒤에 목록을 다시 불러온다. (D-003)
-    if (ok) refresh()
+    await handleUpdate(task, { status }, '상태를 바꾸지 못했습니다.')
   }
 
-  function handleSave(
-    task: Task,
-    input: { title: string; description: string; status: Status },
-  ) {
+  function handleSave(task: Task, input: TaskEdit) {
     return handleUpdate(task, input, '수정하지 못했습니다.')
   }
 

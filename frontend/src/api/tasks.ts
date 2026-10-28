@@ -1,4 +1,4 @@
-import type { Priority, Status, Suggestion, Task } from '../types'
+import type { DivisionItem, Priority, Status, Suggestion, Task } from '../types'
 
 export class ApiError extends Error {
   status: number
@@ -69,6 +69,14 @@ export function suggestTask(input: {
   return request('/api/tasks/suggest', {
     method: 'POST',
     body: JSON.stringify(input),
+  })
+}
+
+// 제목을 주제로 할 일을 나눈 제안만 받는다. 서버는 이 요청으로 아무것도 저장하지 않는다.
+export function divideTask(title: string): Promise<DivisionItem[]> {
+  return request('/api/tasks/division', {
+    method: 'POST',
+    body: JSON.stringify({ title }),
   })
 }
 

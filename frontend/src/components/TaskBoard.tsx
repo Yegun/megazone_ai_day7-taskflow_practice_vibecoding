@@ -124,7 +124,11 @@ function TaskBoard({ onUnauthorized }: Props) {
 
   return (
     <>
-      <TaskForm onSubmit={handleCreate} disabled={loadState !== 'ready'} />
+      <TaskForm
+        onSubmit={handleCreate}
+        disabled={loadState !== 'ready'}
+        onUnauthorized={onUnauthorized}
+      />
 
       {loadState === 'loading' && (
         <StatusMessage kind="loading">불러오는 중...</StatusMessage>
@@ -153,6 +157,7 @@ function TaskBoard({ onUnauthorized }: Props) {
                 onChangeStatus={handleChangeStatus}
                 onSave={handleSave}
                 onDelete={handleDelete}
+                onUnauthorized={onUnauthorized}
               />
             ))}
           </div>

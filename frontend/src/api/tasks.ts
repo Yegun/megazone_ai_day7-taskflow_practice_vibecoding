@@ -1,4 +1,4 @@
-import type { Priority, Status, Task } from '../types'
+import type { Priority, Status, Suggestion, Task } from '../types'
 
 export class ApiError extends Error {
   status: number
@@ -59,6 +59,17 @@ export function updateTask(
 
 export function deleteTask(id: number): Promise<void> {
   return request(`/api/tasks/${id}`, { method: 'DELETE' })
+}
+
+// 우선순위 · 마감일 제안만 받는다. 서버는 이 요청으로 아무것도 저장하지 않는다.
+export function suggestTask(input: {
+  title: string
+  description: string
+}): Promise<Suggestion> {
+  return request('/api/tasks/suggest', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
 }
 
 // 우선순위를 담지 않으면 보통, 마감일을 담지 않으면 마감일 없음으로 저장된다.

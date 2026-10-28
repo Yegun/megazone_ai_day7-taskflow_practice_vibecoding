@@ -43,6 +43,13 @@ export interface TaskEdit {
   due_date?: string | null
 }
 
+// AI 제안 결과. 제안일 뿐 저장되지 않는다. due_date 는 마감일 단서가 없으면 null.
+export interface Suggestion {
+  priority: Priority
+  due_date: string | null
+  reason: string
+}
+
 export interface User {
   id: number
   username: string

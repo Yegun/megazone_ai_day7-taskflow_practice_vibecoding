@@ -9,6 +9,8 @@ import {
   type Task,
   type TaskEdit,
 } from '../types'
+import { useSuggest } from '../useSuggest'
+import { SuggestButton, SuggestNote } from './SuggestParts'
 
 export const UNTITLED = '제목없음'
 
@@ -17,15 +19,26 @@ interface Props {
   // 저장이 성공하면 true. 실패하면 false 를 돌려주고 폼을 열어 둔다.
   onSave: (input: TaskEdit) => Promise<boolean>
   onCancel: () => void
+  // AI 제안을 받다가 세션이 만료되어 401 을 받았을 때.
+  onUnauthorized: () => void
 }
 
-function TaskEditForm({ task, onSave, onCancel }: Props) {
+function TaskEditForm({ task, onSave, onCancel, onUnauthorized }: Props) {
   const [title, setTitle] = useState(task.title)
   const [description, setDescription] = useState(task.description)
   const [status, setStatus] = useState<Status>(task.status)
   const [priority, setPriority] = useState<Priority>(task.priority)
   const [dueDate, setDueDate] = useState(task.due_date ?? '')
   const [saving, setSaving] = useState(false)
+  const suggest = useSuggest(onUnauthorized)
+
+  // 제안은 입력 칸만 채운다. 저장은 저장 버튼을 눌러야 한다. 마감일 단서가 없으면(null) 기존 마감일을 지우지 않고 그대로 둔다.
+  function handleSuggest() {
+    return suggest.run({ title, description }, (s) => {
+      setPriority(s.priority)
+      if (s.due_date) setDueDate(s.due_date)
+    })
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -57,6 +70,7 @@ function TaskEditForm({ task, onSave, onCancel }: Props) {
         value={description}
         onChange={(e) => setDescription(e.target.value)}
       />
+      <SuggestButton pending={suggest.pending} onClick={handleSuggest} />
       <select
         aria-label="상태"
         value={status}
@@ -94,6 +108,11 @@ function TaskEditForm({ task, onSave, onCancel }: Props) {
           마감일 지우기
         </button>
       </div>
+      <SuggestNote
+        pending={suggest.pending}
+        message={suggest.message}
+        reason={suggest.reason}
+      />
       <div className="actions">
         <button type="submit" disabled={saving}>
           저장

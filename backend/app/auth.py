@@ -23,8 +23,11 @@ _DUMMY_HASH = _hasher.hash("dummy-password-for-timing")
 
 
 def load_env_file() -> None:
-    """backend/.env 의 값을 환경변수에 채운다(이미 있는 값은 덮지 않는다). 값은 Git 에 없다."""
-    path = Path(__file__).resolve().parent.parent / ".env"
+    """backend/.env 의 값을 환경변수에 채운다. .env 에 적힌 값이 이미 있는 환경변수보다 우선한다
+    (오래된 PC 환경변수가 .env 를 가리지 않게). 값이 빈 줄은 건너뛰어 환경변수를 지우지 않는다.
+    파일 경로는 TASKFLOW_ENV_FILE 로 바꿀 수 있다(시험이 실제 .env 를 읽지 않게). 값은 Git 에 없다."""
+    override = os.environ.get("TASKFLOW_ENV_FILE")
+    path = Path(override) if override else Path(__file__).resolve().parent.parent / ".env"
     if not path.exists():
         return
     for line in path.read_text(encoding="utf-8").splitlines():
@@ -32,7 +35,9 @@ def load_env_file() -> None:
         if not line or line.startswith("#") or "=" not in line:
             continue
         key, _, value = line.partition("=")
-        os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+        value = value.strip().strip('"').strip("'")
+        if value:
+            os.environ[key.strip()] = value
 
 
 def secret_key() -> bytes:

@@ -7,9 +7,17 @@ interface Props {
   onChangeStatus: (task: Task, status: Status) => void
   onSave: (task: Task, input: TaskEdit) => Promise<boolean>
   onDelete: (task: Task) => void
+  onUnauthorized: () => void
 }
 
-function TaskColumn({ status, tasks, onChangeStatus, onSave, onDelete }: Props) {
+function TaskColumn({
+  status,
+  tasks,
+  onChangeStatus,
+  onSave,
+  onDelete,
+  onUnauthorized,
+}: Props) {
   return (
     <section className="task-column" aria-label={STATUS_LABEL[status]}>
       <h2>{STATUS_LABEL[status]}</h2>
@@ -21,6 +29,7 @@ function TaskColumn({ status, tasks, onChangeStatus, onSave, onDelete }: Props) 
             onChangeStatus={onChangeStatus}
             onSave={onSave}
             onDelete={onDelete}
+            onUnauthorized={onUnauthorized}
           />
         ))}
       </ul>

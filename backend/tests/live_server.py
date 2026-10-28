@@ -39,6 +39,8 @@ DEFAULT_USER = ("tester01", "password-1234")
 class LiveServerTestCase(unittest.TestCase):
     # True 면 시작할 때 DEFAULT_USER 로 가입해 로그인한 상태로 둔다. 인증 자체를 시험하는 테스트는 False.
     auto_login = True
+    # 서버 프로세스에 더 넘길 환경변수. 서버를 띄우기 전(setUp 이 끝나기 전)에 정해져 있어야 한다.
+    extra_env: dict[str, str] = {}
 
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
@@ -56,7 +58,16 @@ class LiveServerTestCase(unittest.TestCase):
             assert status == 201, status
 
     def start_server(self) -> None:
-        env = {**os.environ, "TASKFLOW_DB": self.db_file, "SESSION_SECRET_KEY": TEST_SECRET}
+        # 시험이 실제 Anthropic 을 부르지 않도록 키를 비워 둔다. 필요한 시험만 extra_env 로 덮는다.
+        env = {
+            **os.environ,
+            "TASKFLOW_DB": self.db_file,
+            "SESSION_SECRET_KEY": TEST_SECRET,
+            "ANTHROPIC_API_KEY": "",
+            # 개발자 PC 의 실제 backend/.env 를 읽지 않게 없는 파일을 가리킨다.
+            "TASKFLOW_ENV_FILE": str(Path(self._tmp.name) / "no-such.env"),
+            **self.extra_env,
+        }
         self.proc = subprocess.Popen(
             [sys.executable, "-m", "uvicorn", "app.main:app", "--port", str(self.port)],
             cwd=BACKEND_DIR,

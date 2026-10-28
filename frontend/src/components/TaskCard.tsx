@@ -14,9 +14,10 @@ interface Props {
   onChangeStatus: (task: Task, status: Status) => void
   onSave: (task: Task, input: TaskEdit) => Promise<boolean>
   onDelete: (task: Task) => void
+  onUnauthorized: () => void
 }
 
-function TaskCard({ task, onChangeStatus, onSave, onDelete }: Props) {
+function TaskCard({ task, onChangeStatus, onSave, onDelete, onUnauthorized }: Props) {
   const [editing, setEditing] = useState(false)
 
   if (editing) {
@@ -26,6 +27,7 @@ function TaskCard({ task, onChangeStatus, onSave, onDelete }: Props) {
           task={task}
           onSave={(input) => onSave(task, input)}
           onCancel={() => setEditing(false)}
+          onUnauthorized={onUnauthorized}
         />
       </li>
     )

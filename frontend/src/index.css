@@ -408,3 +408,36 @@ main > h1 {
   border-radius: 6px;
   cursor: pointer;
 }
+
+/* AI 제안: 버튼과 안내 한 줄. 등록 · 수정 폼이 함께 쓴다. */
+.suggest-button {
+  padding: 8px 12px;
+  font: inherit;
+  color: var(--text-h);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.task-edit-form .suggest-button {
+  align-self: flex-start;
+  padding: 4px 10px;
+  font-size: 14px;
+}
+
+.suggest-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.suggest-note {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.suggest-note.suggest-error {
+  color: #d33;
+}

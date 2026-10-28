@@ -96,7 +96,35 @@ class Task(BaseModel):
     updated_at: str
 
 
-MIGRATED_USERNAME = "migrated@test.com"
+class SuggestRequest(BaseModel):
+    """AI 제안 요청. 저장하지 않는다."""
+
+    title: str
+    description: str = ""
+
+    @field_validator("title")
+    @classmethod
+    def title_not_blank(cls, value: str) -> str:
+        return _strip_title(value)
+
+
+class Suggestion(BaseModel):
+    """AI 제안 결과. 모델 답을 검수하는 데도 쓴다: 허용 밖의 값이면 ValidationError."""
+
+    priority: Priority
+    due_date: str | None  # YYYY-MM-DD 이고 실제로 있는 날짜. 없으면 null
+    reason: str
+
+    @field_validator("due_date", mode="before")
+    @classmethod
+    def due_date_format(cls, value: object) -> object:
+        _strict_date(value)
+        if value is not None:
+            date.fromisoformat(value)  # 없는 날짜(2026-02-30)는 ValueError
+        return value
+
+
+MIGRATED_USERNAME ="migrated@test.com"
 _USERNAME_RE = re.compile(r"^[a-z0-9]{4,20}$")
 
 

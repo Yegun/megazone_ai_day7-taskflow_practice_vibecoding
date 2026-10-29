@@ -1,4 +1,4 @@
-import type { Briefing, DivisionItem, Priority, Status, Suggestion, Task } from '../types'
+import type { Briefing, DivisionItem, Priority, Status, Suggestion, Task, WeekPlan } from '../types'
 
 export class ApiError extends Error {
   status: number
@@ -93,4 +93,9 @@ export function createTask(input: {
 // 오늘의 브리핑만 받는다. 본문 없이 보내면 서버가 로그인한 사람의 끝나지 않은 할 일을 모은다. 아무것도 저장하지 않는다.
 export function briefTasks(): Promise<Briefing> {
   return request('/api/tasks/briefing', { method: 'POST' })
+}
+
+// 일주일 계획만 받는다. 본문 없이 보내면 서버가 로그인한 사람의 끝나지 않은 할 일을 모은다. 아무것도 저장하지 않는다.
+export function planWeek(): Promise<WeekPlan> {
+  return request('/api/tasks/weekplan', { method: 'POST' })
 }

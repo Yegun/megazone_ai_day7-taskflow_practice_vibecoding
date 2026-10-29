@@ -1,0 +1,63 @@
+/* AI 일주일 계획: 보드 위의 버튼 하나와 그 아래 카드 한 장. 버튼 · 안내 문구는 기존 클래스를 쓴다. */
+.weekplan {
+  margin-bottom: 16px;
+}
+
+.weekplan .suggest-note {
+  margin-top: 8px;
+}
+
+.weekplan-card {
+  margin-top: 8px;
+  padding: 12px;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+}
+
+.weekplan-list {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+}
+
+.weekplan-list li {
+  display: flex;
+  gap: 12px;
+  padding: 2px 0;
+}
+
+.weekplan-date {
+  flex: none;
+  color: var(--text-h);
+  font-variant-numeric: tabular-nums;
+}
+
+.weekplan-titles {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.weekplan-note {
+  margin: 0 0 8px;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.weekplan-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 720px) {
+  .weekplan-list li {
+    flex-direction: column;
+    gap: 0;
+    padding: 4px 0;
+  }
+
+  .weekplan-actions .suggest-button {
+    min-height: 40px;
+  }
+}

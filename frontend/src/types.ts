@@ -68,3 +68,9 @@ export interface Briefing {
   later: number[]
   cheer: string
 }
+
+// AI 일주일 계획. 보여 주기만 하고 저장하지 않는다. 날짜는 YYYY-MM-DD, 제목은 없고 id 만 온다.
+export interface WeekPlan {
+  days: { date: string; task_ids: number[] }[]
+  note: string
+}

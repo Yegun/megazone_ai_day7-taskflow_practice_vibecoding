@@ -3,6 +3,7 @@ import { getMe, logout } from './api/auth'
 import { isUnauthorized } from './api/tasks'
 import AuthForm from './components/AuthForm'
 import Briefing from './components/BriefingCard'
+import WeekPlan from './components/WeekPlanCard'
 import StatusMessage from './components/StatusMessage'
 import TaskBoard from './components/TaskBoard'
 import UserBar from './components/UserBar'
@@ -71,6 +72,7 @@ function App() {
         <>
           <UserBar user={auth.user} onLogout={handleLogout} />
           <Briefing key={auth.user.id} onUnauthorized={handleUnauthorized} />
+          <WeekPlan key={auth.user.id} onUnauthorized={handleUnauthorized} />
           {/* key: 다른 계정으로 로그인하면 이전 사용자의 목록 상태를 버린다. */}
           <TaskBoard key={auth.user.id} onUnauthorized={handleUnauthorized} />
         </>

@@ -50,6 +50,13 @@ export interface Suggestion {
   reason: string
 }
 
+// AI 가 나눈 할 일 하나. 제안일 뿐 저장되지 않는다. due_date 는 마감일 단서가 없으면 null.
+export interface DivisionItem {
+  title: string
+  priority: Priority
+  due_date: string | null
+}
+
 export interface User {
   id: number
   username: string

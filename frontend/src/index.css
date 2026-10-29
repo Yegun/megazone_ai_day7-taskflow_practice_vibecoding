@@ -441,3 +441,66 @@ main > h1 {
 .suggest-note.suggest-error {
   color: #d33;
 }
+
+/* AI 로 할 일 만들기: 등록 전 미리 보기. 폼 아래에 한 줄에 할 일 하나씩 보여 준다. */
+.division-panel {
+  flex-basis: 100%;
+  padding: 12px;
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+}
+
+.division-heading {
+  margin: 0 0 8px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.division-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.division-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 14px;
+}
+
+.division-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-h);
+}
+
+.division-priority {
+  flex: none;
+  padding: 1px 8px;
+  font-size: 13px;
+  color: var(--text-h);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.division-priority.priority-high {
+  font-weight: 600;
+  border-color: var(--accent-border);
+}
+
+.division-due {
+  flex: none;
+  min-width: 3.5em;
+  text-align: right;
+}
+
+.division-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}

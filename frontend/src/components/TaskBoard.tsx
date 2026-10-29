@@ -8,7 +8,14 @@ import {
   listTasks,
   updateTask,
 } from '../api/tasks'
-import { STATUSES, type Priority, type Status, type Task, type TaskEdit } from '../types'
+import {
+  STATUSES,
+  type DivisionItem,
+  type Priority,
+  type Status,
+  type Task,
+  type TaskEdit,
+} from '../types'
 import StatusMessage from './StatusMessage'
 import TaskColumn from './TaskColumn'
 import TaskForm from './TaskForm'
@@ -82,6 +89,34 @@ function TaskBoard({ onUnauthorized }: Props) {
     }
   }
 
+  // AI 가 나눈 할 일을 순서대로 하나씩 등록한다. 기존 등록(createTask)을 그대로 쓴다.
+  // 실패하면 거기서 멈추고, 등록하지 못한 항목을 돌려준다.
+  async function handleCreateMany(items: DivisionItem[]) {
+    let created = false
+    let failed: DivisionItem[] = []
+    for (const [i, item] of items.entries()) {
+      try {
+        await createTask({
+          title: item.title,
+          description: '',
+          priority: item.priority,
+          ...(item.due_date && { due_date: item.due_date }),
+        })
+        created = true
+      } catch (e) {
+        fail('등록하지 못했습니다.', e)
+        failed = items.slice(i)
+        break
+      }
+    }
+    if (created) {
+      if (failed.length === 0) setError('')
+      // 순서는 서버가 정한다. 다시 불러와 서버 정렬을 따른다. (R-011)
+      refresh()
+    }
+    return failed
+  }
+
   // 상태 변경과 내용 수정이 같은 흐름이다. 성공 응답을 받은 뒤에만 바꾼다. (D-003)
   async function handleUpdate(
     task: Task,
@@ -127,6 +162,7 @@ function TaskBoard({ onUnauthorized }: Props) {
       <TaskForm
         onSubmit={handleCreate}
         disabled={loadState !== 'ready'}
+        onCreateMany={handleCreateMany}
         onUnauthorized={onUnauthorized}
       />
 

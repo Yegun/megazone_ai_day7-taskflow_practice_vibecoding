@@ -61,3 +61,10 @@ export interface User {
   id: number
   username: string
 }
+
+// AI 브리핑 결과. 보여 주기만 하고 저장하지 않는다. 제목은 없고 id 만 온다.
+export interface Briefing {
+  top3: { id: number; reason: string }[]
+  later: number[]
+  cheer: string
+}

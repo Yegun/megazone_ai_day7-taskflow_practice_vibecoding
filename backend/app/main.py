@@ -9,6 +9,7 @@ from .routes import briefing as briefing_routes
 from .routes import division as division_routes
 from .routes import suggest as suggest_routes
 from .routes import tasks
+from .routes import weekplan as weekplan_routes
 
 
 @asynccontextmanager
@@ -33,5 +34,6 @@ api.include_router(auth_routes.router)
 api.include_router(suggest_routes.router)
 api.include_router(division_routes.router)
 api.include_router(briefing_routes.router)
+api.include_router(weekplan_routes.router)
 api.include_router(tasks.router)
 app.include_router(api)

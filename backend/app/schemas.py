@@ -227,3 +227,25 @@ class Login(BaseModel):
 class User(BaseModel):
     id: int
     username: str
+
+
+class WeekDay(BaseModel):
+    """일주일 계획의 하루: 날짜(YYYY-MM-DD)와 그날 할 일 id 목록."""
+
+    date: str
+    task_ids: list[int]
+
+
+class WeekPlan(BaseModel):
+    """AI 일주일 계획. 모델 답을 검수하는 데도 쓴다: 허용 밖의 모양이면 ValidationError."""
+
+    days: list[WeekDay]
+    note: str
+
+    @field_validator("note")
+    @classmethod
+    def note_one_line(cls, value: str) -> str:
+        line = " ".join(value.split())
+        if not line:
+            raise ValueError("조언은 비워 둘 수 없습니다.")
+        return line

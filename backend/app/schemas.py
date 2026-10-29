@@ -156,6 +156,35 @@ class DivisionItem(BaseModel):
         return value
 
 
+class BriefingPick(BaseModel):
+    """먼저 할 일 하나: 할 일 id 와 이유."""
+
+    id: int
+    reason: str
+
+    @field_validator("reason")
+    @classmethod
+    def reason_not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("이유는 비워 둘 수 없습니다.")
+        return value
+
+
+class Briefing(BaseModel):
+    """AI 브리핑 결과. 모델 답을 검수하는 데도 쓴다: 허용 밖의 모양이면 ValidationError."""
+
+    top3: list[BriefingPick]
+    later: list[int]
+    cheer: str
+
+    @field_validator("cheer")
+    @classmethod
+    def cheer_not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("응원 문장은 비워 둘 수 없습니다.")
+        return value
+
+
 MIGRATED_USERNAME ="migrated@test.com"
 _USERNAME_RE = re.compile(r"^[a-z0-9]{4,20}$")
 

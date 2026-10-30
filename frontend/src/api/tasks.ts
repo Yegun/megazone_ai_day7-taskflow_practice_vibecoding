@@ -1,4 +1,12 @@
-import type { Briefing, DivisionItem, Priority, Status, Suggestion, Task } from '../types'
+import type {
+  Briefing,
+  CommandResult,
+  DivisionItem,
+  Priority,
+  Status,
+  Suggestion,
+  Task,
+} from '../types'
 
 export class ApiError extends Error {
   status: number
@@ -93,4 +101,40 @@ export function createTask(input: {
 // 오늘의 브리핑만 받는다. 본문 없이 보내면 서버가 로그인한 사람의 끝나지 않은 할 일을 모은다. 아무것도 저장하지 않는다.
 export function briefTasks(): Promise<Briefing> {
   return request('/api/tasks/briefing', { method: 'POST' })
+}
+
+// 서버가 422 로 알려 준 이유를 함께 담는다.
+export class ReasonError extends ApiError {
+  reason: string
+
+  constructor(status: number, reason: string) {
+    super(status)
+    this.reason = reason
+  }
+}
+
+// 422 본문(FastAPI detail)에서 이유 글만 꺼낸다. 읽지 못하면 빈 글.
+function reasonOf(body: unknown): string {
+  const detail = (body as { detail?: unknown } | null)?.detail
+  if (typeof detail === 'string') return detail
+  if (!Array.isArray(detail)) return ''
+  return detail
+    .map((d: { msg?: unknown }) => (typeof d?.msg === 'string' ? d.msg.replace(/^Value error, /, '') : ''))
+    .filter(Boolean)
+    .join(' ')
+}
+
+// 한 문장을 동작 목록으로 바꾼 제안만 받는다. 서버는 이 요청으로 아무것도 저장하지 않는다.
+export async function commandTasks(text: string): Promise<CommandResult> {
+  const res = await fetch('/api/tasks/command', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  })
+  if (res.status === 422) {
+    const body: unknown = await res.json().catch(() => null)
+    throw new ReasonError(422, reasonOf(body))
+  }
+  if (!res.ok) throw new ApiError(res.status)
+  return res.json()
 }

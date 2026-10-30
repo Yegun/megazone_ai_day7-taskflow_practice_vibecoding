@@ -3,6 +3,7 @@ import { getMe, logout } from './api/auth'
 import { isUnauthorized } from './api/tasks'
 import AuthForm from './components/AuthForm'
 import Briefing from './components/BriefingCard'
+import CommandBar from './components/CommandBar'
 import StatusMessage from './components/StatusMessage'
 import TaskBoard from './components/TaskBoard'
 import UserBar from './components/UserBar'
@@ -16,6 +17,8 @@ const EXPIRED_NOTICE = '로그인이 만료되었습니다. 다시 로그인해 
 function App() {
   const [auth, setAuth] = useState<Auth>({ kind: 'checking' })
   const [notice, setNotice] = useState('')
+  // 한 문장으로 시킨 일을 적용하면 올려서 보드가 목록을 다시 받게 한다.
+  const [boardVersion, setBoardVersion] = useState(0)
 
   function check() {
     getMe()
@@ -72,7 +75,12 @@ function App() {
           <UserBar user={auth.user} onLogout={handleLogout} />
           <Briefing key={auth.user.id} onUnauthorized={handleUnauthorized} />
           {/* key: 다른 계정으로 로그인하면 이전 사용자의 목록 상태를 버린다. */}
-          <TaskBoard key={auth.user.id} onUnauthorized={handleUnauthorized} />
+          <CommandBar
+            key={auth.user.id}
+            onUnauthorized={handleUnauthorized}
+            onApplied={() => setBoardVersion((v) => v + 1)}
+          />
+          <TaskBoard key={`${auth.user.id}-${boardVersion}`} onUnauthorized={handleUnauthorized} />
         </>
       )}
     </main>

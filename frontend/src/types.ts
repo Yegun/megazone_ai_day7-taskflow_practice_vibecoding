@@ -62,6 +62,22 @@ export interface User {
   username: string
 }
 
+// 한 문장으로 시키기: 동작 하나. add 는 title (+ priority · due_date), due 는 id + value=YYYY-MM-DD, done 은 id.
+export interface CommandAction {
+  kind: 'add' | 'due' | 'done'
+  id: number | null
+  title: string | null
+  value: string | null
+  priority: Priority | null
+  due_date: string | null
+}
+
+// 시킨 결과. 제안일 뿐 저장되지 않는다. 못 알아들으면 actions 는 비고 ask 에 한 문장이 온다.
+export interface CommandResult {
+  actions: CommandAction[]
+  ask: string | null
+}
+
 // AI 브리핑 결과. 보여 주기만 하고 저장하지 않는다. 제목은 없고 id 만 온다.
 export interface Briefing {
   top3: { id: number; reason: string }[]

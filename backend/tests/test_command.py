@@ -6,6 +6,10 @@ from tests.test_briefing import TODAY, YESTERDAY, BriefingTestBase
 from tests.test_suggest import FAKE_KEY, SuggestTestBase, error_body
 
 
+# 응답의 동작 하나는 항상 여섯 칸이다.
+EMPTY = {"kind": None, "id": None, "title": None, "value": None, "priority": None, "due_date": None}
+
+
 class CommandTestBase(BriefingTestBase):
     """브리핑 시험과 같은 할 일(late · now · free · done)을 쓴다. setUp 의 모델 답은 시험마다 바꾼다."""
 
@@ -32,7 +36,7 @@ class CommandApiTest(CommandTestBase):
         self.reply_text(
             self.command_answer(
                 actions=[
-                    {"kind": "add", "id": None, "title": "장보기", "value": "LOW"},
+                    {"kind": "add", "id": None, "title": "장보기", "priority": "LOW", "due_date": "2026-11-02"},
                     {"kind": "due", "id": self.free, "title": None, "value": "2026-12-31"},
                     {"kind": "done", "id": self.late, "title": None, "value": None},
                 ]
@@ -44,9 +48,9 @@ class CommandApiTest(CommandTestBase):
             body,
             {
                 "actions": [
-                    {"kind": "add", "id": None, "title": "장보기", "value": "LOW"},
-                    {"kind": "due", "id": self.free, "title": None, "value": "2026-12-31"},
-                    {"kind": "done", "id": self.late, "title": None, "value": None},
+                    {**EMPTY, "kind": "add", "title": "장보기", "priority": "LOW", "due_date": "2026-11-02"},
+                    {**EMPTY, "kind": "due", "id": self.free, "value": "2026-12-31"},
+                    {**EMPTY, "kind": "done", "id": self.late},
                 ],
                 "ask": None,
             },
@@ -114,7 +118,7 @@ class CommandApiTest(CommandTestBase):
         self.reply_text(self.command_answer(actions=[{"kind": "add", "title": "첫 일"}]))
         status, body = self.command_request("첫 일 추가")
         self.assertEqual(status, 200, body)
-        self.assertEqual(body["actions"], [{"kind": "add", "id": None, "title": "첫 일", "value": None}])
+        self.assertEqual(body["actions"], [{**EMPTY, "kind": "add", "title": "첫 일"}])
 
     # ---- 검수 ----
 
@@ -125,7 +129,7 @@ class CommandApiTest(CommandTestBase):
             {"kind": "done", "id": self.now},
         )
         self.assertEqual(status, 200)
-        self.assertEqual(body["actions"], [{"kind": "done", "id": self.now, "title": None, "value": None}])
+        self.assertEqual(body["actions"], [{**EMPTY, "kind": "done", "id": self.now}])
         self.assertIsNone(body["ask"])
 
     def test_bad_dates_drop_the_action(self) -> None:
@@ -136,10 +140,16 @@ class CommandApiTest(CommandTestBase):
                 self.assertEqual(body["actions"], [])
                 self.assertTrue(body["ask"])
 
-    def test_bad_priority_clears_value_but_keeps_add(self) -> None:
-        status, body = self.with_actions({"kind": "add", "title": "급한 일", "value": "URGENT"})
-        self.assertEqual(status, 200)
-        self.assertEqual(body["actions"], [{"kind": "add", "id": None, "title": "급한 일", "value": None}])
+    def test_bad_add_priority_or_date_drops_the_action(self) -> None:
+        for field, value in (("priority", "URGENT"), ("priority", 1), ("due_date", "2026-02-30"), ("due_date", "내일"), ("due_date", 20261231)):
+            with self.subTest(field=field, value=value):
+                status, body = self.with_actions({"kind": "add", "title": "급한 일", field: value})
+                self.assertEqual((status, body["actions"]), (200, []))
+                self.assertTrue(body["ask"])
+
+    def test_add_without_priority_or_date_is_kept(self) -> None:
+        status, body = self.with_actions({"kind": "add", "title": "급한 일", "priority": None, "due_date": None})
+        self.assertEqual((status, body["actions"]), (200, [{**EMPTY, "kind": "add", "title": "급한 일"}]))
 
     def test_blank_add_title_drops_the_action(self) -> None:
         status, body = self.with_actions({"kind": "add", "title": "  "}, {"kind": "add"})

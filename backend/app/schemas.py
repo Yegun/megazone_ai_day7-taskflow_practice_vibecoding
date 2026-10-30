@@ -205,12 +205,14 @@ class CommandRequest(BaseModel):
 
 
 class CommandAction(BaseModel):
-    """시킨 동작 하나. add: title (+ value=우선순위), due: id + value=YYYY-MM-DD, done: id. 삭제는 없다."""
+    """시킨 동작 하나. add: title (+ priority · due_date), due: id + value=YYYY-MM-DD, done: id. 삭제는 없다."""
 
     kind: Literal["add", "due", "done"]
     id: int | None = None
     title: str | None = None
     value: str | None = None
+    priority: str | None = None  # add 만. LOW · NORMAL · HIGH, 말하지 않았으면 null
+    due_date: str | None = None  # add 만. YYYY-MM-DD, 말하지 않았으면 null
 
 
 class CommandResult(BaseModel):

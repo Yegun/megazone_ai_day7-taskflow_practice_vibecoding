@@ -1,6 +1,7 @@
 import re
 from datetime import date
 from enum import StrEnum
+from typing import Literal
 
 from pydantic import BaseModel, field_validator, model_validator
 
@@ -183,6 +184,40 @@ class Briefing(BaseModel):
         if not value.strip():
             raise ValueError("응원 문장은 비워 둘 수 없습니다.")
         return value
+
+
+COMMAND_TEXT_MIN = 1
+COMMAND_TEXT_MAX = 200
+
+
+class CommandRequest(BaseModel):
+    """한 문장으로 시키기 요청. 저장하지 않는다. 앞뒤 공백을 뗀 글이 1~200자여야 한다."""
+
+    text: str
+
+    @field_validator("text")
+    @classmethod
+    def text_length(cls, value: str) -> str:
+        text = value.strip()
+        if not COMMAND_TEXT_MIN <= len(text) <= COMMAND_TEXT_MAX:
+            raise ValueError(f"문장은 {COMMAND_TEXT_MIN}~{COMMAND_TEXT_MAX}자로 입력해야 합니다.")
+        return text
+
+
+class CommandAction(BaseModel):
+    """시킨 동작 하나. add: title (+ value=우선순위), due: id + value=YYYY-MM-DD, done: id. 삭제는 없다."""
+
+    kind: Literal["add", "due", "done"]
+    id: int | None = None
+    title: str | None = None
+    value: str | None = None
+
+
+class CommandResult(BaseModel):
+    """한 문장으로 시키기 결과. 동작이 남으면 ask 는 null, 못 알아들었으면 actions 가 비고 ask 에 한 문장."""
+
+    actions: list[CommandAction]
+    ask: str | None
 
 
 MIGRATED_USERNAME ="migrated@test.com"
